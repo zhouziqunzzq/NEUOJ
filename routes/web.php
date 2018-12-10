@@ -2,16 +2,14 @@
 
 /*
 |--------------------------------------------------------------------------
-| Application Routes
+| Web Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register all of the routes for an application.
-| It's a breeze. Simply tell Laravel the URIs it should respond to
-| and give it the controller to call when that URI is requested.
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
-
-use Illuminate\Support\Facades\View;
 
 if (version_compare(PHP_VERSION, '7.2.0', '>=')) {
     // Ignores notices and reports all other kinds... and warnings
@@ -20,7 +18,7 @@ if (version_compare(PHP_VERSION, '7.2.0', '>=')) {
 }
 
 /*Route group need profile middleware*/
-Route::group(['middleware' => 'profile'],function() {
+Route::group(['middleware' => 'profile'], function () {
 
     Route::get('/', [
         "as" => "home",
@@ -35,18 +33,18 @@ Route::group(['middleware' => 'profile'],function() {
         "uses" => "AuthController@requestResetAction"
     ]);
 
-    Route::match(['get', 'post'], '/auth/reset',[
+    Route::match(['get', 'post'], '/auth/reset', [
         "uses" => "AuthController@resetPasswordAction"
     ]);
 
     Route::get('/auth/ssologin', [
         "sso" => "ssologin",
         "uses" => "SsoAuthController@casloginAction"
-    ]);    
+    ]);
 
     Route::get('/profile/{user_id}', [
         "uses" => "UserController@showProfile"
-    ])->where('user_id','[0-9]+');
+    ])->where('user_id', '[0-9]+');
 
 
     Route::match(['post', 'get'], '/problem/p/{page_id}', [
@@ -158,7 +156,7 @@ Route::group(['middleware' => 'profile'],function() {
     Route::get('/training', [
         "uses" => "TrainingController@getTrainingList"
     ]);
-    Route::get('/training/p/1',[
+    Route::get('/training/p/1', [
         "uses" => "TrainingController@getTrainingList"
     ]);
 
@@ -279,7 +277,7 @@ Route::group(['middleware' => 'profile'],function() {
             "uses" => "ContestController@newContestRandomUsers"
         ])->where('problem_id', '[0-9]+');
 
-        Route::delete('/dashboard/contest/randusers/{contest_id}',[
+        Route::delete('/dashboard/contest/randusers/{contest_id}', [
             "middleware" => "role:admin",
             "uses" => "ContestController@deleteContestRandomUsers"
         ]);
@@ -300,7 +298,7 @@ Route::group(['middleware' => 'profile'],function() {
             "uses" => "ProblemController@importProblem"
         ]);
 
-        Route::delete('/dashboard/contest/{contest_id}',[
+        Route::delete('/dashboard/contest/{contest_id}', [
             "middleware" => "role:admin",
             "uses" => "ContestController@deleteContest"
         ])->where('contest_id', '[0-9]+');
@@ -319,9 +317,9 @@ Route::group(['middleware' => 'profile'],function() {
             "uses" => "ContestController@getContestBalloonView"
         ])->where('contest_id', '[0-9]+');
 
-        Route::get('/contest/{contest_id}/balloon/{id}',[
+        Route::get('/contest/{contest_id}/balloon/{id}', [
             "middleware" => "role:balloon",
-            "uses" =>"ContestController@changeContestBalloonStatus"
+            "uses" => "ContestController@changeContestBalloonStatus"
         ])->where([
             "contest_id" => "[0-9]+",
             "id" => "[0-9]+"
@@ -374,7 +372,7 @@ Route::group(['middleware' => 'profile'],function() {
             "uses" => "ContestController@registerContest"
         ])->where('contest_id', '[0-9]+');
 
-        Route::get('/dashboard/problem/{problem_id}/visibility',[
+        Route::get('/dashboard/problem/{problem_id}/visibility', [
             "middleware" => "role:admin",
             "uses" => "ProblemController@changeVisibility"
         ])->where('problem_id', '[0-9]+');
@@ -394,34 +392,34 @@ Route::group(['middleware' => 'profile'],function() {
             "uses" => "SystemController@getSystemSummary"
         ]);
 
-        Route::get('/discuss/{contest_id}/{problem_id}',[
+        Route::get('/discuss/{contest_id}/{problem_id}', [
             "uses" => "ThreadController@getThreadByContestIDAndProblemID"
         ])->where([
             'contest_id' => '[0-9]+',
             'problem_id' => '[0-9]+'
         ]);
 
-        Route::get('/discuss/t/{thread_id}',[
+        Route::get('/discuss/t/{thread_id}', [
             "uses" => "ThreadController@getThreadByThreadID"
         ])->where('thread_id', '[0-9]+');
 
-        Route::post('/discuss/add/{contest_id}/{problem_id}',[
+        Route::post('/discuss/add/{contest_id}/{problem_id}', [
             "uses" => "ThreadController@addThreadByContestIDAndProblemID"
         ])->where([
             'contest_id' => '[0-9]+',
             'problem_id' => '[0-9]+'
         ]);
 
-        Route::post('/discuss/delete/{thread_id}',[
+        Route::post('/discuss/delete/{thread_id}', [
             "middleware" => "role:admin",
             "uses" => "ThreadController@deleteThreadByThreadID"
         ])->where('thread_id', '[0-9]+');
 
-        Route::get('/discuss/{contest_id}',[
+        Route::get('/discuss/{contest_id}', [
             "uses" => "ThreadController@getThreadByContestID"
         ])->where('contest_id', '[0-9]+');
 
-        Route::get('/discuss/{contest_id}/p/{page_id}',[
+        Route::get('/discuss/{contest_id}/p/{page_id}', [
             "uses" => "ThreadController@getThreadByContestIDAndPageID"
         ])->where([
             'contest_id' => '[0-9]+',
@@ -450,12 +448,12 @@ Route::group(['middleware' => 'profile'],function() {
             'train_problem_id' => '[0-9]+'
         ]);
 
-        Route::match(['post','get'], '/dashboard/training/add', [
+        Route::match(['post', 'get'], '/dashboard/training/add', [
             "middleware" => "role:admin",
             "uses" => "TrainingController@addTraining"
         ]);
 
-        Route::match(['post','get'], '/dashboard/training/{train_id}', [
+        Route::match(['post', 'get'], '/dashboard/training/{train_id}', [
             "middleware" => "role:admin",
             "uses" => "TrainingController@setTraining"
         ])->where('train_id', '[0-9]+');
@@ -532,7 +530,7 @@ Route::group(['middleware' => 'profile'],function() {
  * Use Judge RoleCheck to Ensure the Data won't revealed
  */
 
-Route::group(['middleware' => "role:judge"], function() {
+Route::group(['middleware' => "role:judge"], function () {
     Route::post('/api/judgings', [
         "uses" => "RESTController@postJudgings"
     ]);
@@ -574,6 +572,6 @@ Route::group(['middleware' => "role:judge"], function() {
  * Show avatars route
  */
 
-Route::get('/avatar/{user_id}',[
+Route::get('/avatar/{user_id}', [
     "uses" => "UserController@showAvatar"
 ])->where('user_id', '[0-9]+');
