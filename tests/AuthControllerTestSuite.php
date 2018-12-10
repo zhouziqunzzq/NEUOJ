@@ -5,7 +5,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use App\User;
 
-class AuthControllerTestSuite extends TestCase
+class AuthControllerTestSuite extends BrowserKitTestCase
 {
     use DatabaseMigrations;
 

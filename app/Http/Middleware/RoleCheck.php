@@ -22,7 +22,7 @@ class RoleCheck
         }
         if($role == "view-code")
         {
-            $run_id = $request->route()->getParameter('run_id');
+            $run_id = $request->route()->parameter('run_id');
             $param['runid'] = $run_id;
             $roleCheck = new RoleController;
             if($roleCheck->is("able-view-code", $param))

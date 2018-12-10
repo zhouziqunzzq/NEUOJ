@@ -7,3 +7,4 @@ Homestead.json
 composer.lock
 _ide_helper.php
 /storage/debugbar
+.phpstorm.meta.php

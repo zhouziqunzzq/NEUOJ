@@ -5,7 +5,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use App\Http\Controllers\RoleController;
 
-class RoleAndAbleTestSuite extends TestCase
+class RoleAndAbleTestSuite extends BrowserKitTestCase
 {
 
     private $adminObj, $teacherObj, $stuObj;
