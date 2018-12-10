@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Validator;
+use Laravel\Dusk\DuskServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,8 +15,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Validator::extend('notpurenumber', function($attribute, $value, $parameters, $validator) {
-            if(is_numeric($value))
+        Validator::extend('notpurenumber', function ($attribute, $value, $parameters, $validator) {
+            if (is_numeric($value))
                 return false;
             return true;
         });
@@ -28,6 +29,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        if ($this->app->environment('local', 'testing')) {
+            $this->app->register(DuskServiceProvider::class);
+        }
     }
 }
