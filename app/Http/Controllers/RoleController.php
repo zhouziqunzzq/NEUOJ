@@ -78,10 +78,13 @@ class RoleController extends Controller
             return true;
         return false;
     }
+
     /**
      * @function is
      * @input $role(string) $param(mixed)
      *
+     * @param $role
+     * @param null $param
      * @return bool
      * @description check whether current user is $role
      */
