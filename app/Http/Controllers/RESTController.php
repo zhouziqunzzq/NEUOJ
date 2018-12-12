@@ -198,13 +198,17 @@ class RESTController extends Controller
 
     public function getTestcaseFiles(Request $request)
     {
-        $jsonData = "";
         $input = $request->input();
         $testcase = Testcase::where("testcase_id", $input["testcaseid"])->first();
-        if (isset($input["input"])) {
+        if (array_key_exists("input", $input)) {
             $jsonData = Storage::get("testdata/" . $testcase->input_file_name);
-        } else if (isset($input["output"])) {
+        } else if (array_key_exists("output", $input)) {
             $jsonData = Storage::get("testdata/" . $testcase->output_file_name);
+        } else {    // wrong request argument
+            return response(
+                'testcase file type (input or output) expected',
+                400
+            );
         }
         $jsonData = base64_encode($jsonData);
         return response()->json($jsonData);
