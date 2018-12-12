@@ -570,7 +570,7 @@ class ContestController extends Controller
                     'uid' => $contestRanklistObj[$i]->uid,
                     'contest_id' => $contest_id
                 ])->delete();
-                $this->dispatch(new updateContestRanklist($contest_id, 0, true));
+                updateContestRanklist::dispatch($contest_id, 0, true);
                 return Redirect::to("/contest/$contest_id/ranklist");
             }
             elseif(!$userInfoObj)

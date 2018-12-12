@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Jobs\Job;
+use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Bus\SelfHandling;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
 
 use Redis;
 use App\Submission;
@@ -15,9 +15,9 @@ use App\Contest;
 use App\ContestProblem;
 use App\ContestRanklist;
 
-class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
+class updateContestRanklist extends Job implements ShouldQueue
 {
-    use InteractsWithQueue, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $uid;
     protected $contest_id;
@@ -27,9 +27,12 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @return void
+     * @param $contest_id
+     * @param $uid
+     * @param $force
+     * @param bool $init
      */
-    public function __construct($contest_id, $uid, $force, $init=false)
+    public function __construct($contest_id, $uid, $force, $init = false)
     {
         $this->uid = $uid;
         $this->contest_id = $contest_id;
@@ -47,9 +50,8 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
         $submissionObj = Submission::where([
             'cid' => $this->contest_id,
             'uid' => $this->uid
-            ])->orderby('runid', 'asc')->get();
-        if($submissionObj != NULL && $this->uid != 0)
-        {
+        ])->orderby('runid', 'asc')->get();
+        if ($submissionObj != NULL && $this->uid != 0) {
             $penalty_list = [];
             $result_list = [];
             $total_penalty = 0;
@@ -57,36 +59,29 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
             $contestObj = Contest::where('contest_id', $this->contest_id)->first();
             $contestProblemObj = ContestProblem::where('contest_id', $this->contest_id)->get();
             // get penalty for each problem
-            foreach($contestProblemObj as $contestProblem)
-            {
+            foreach ($contestProblemObj as $contestProblem) {
                 $cpid = $contestProblem->contest_problem_id;
                 $fb_submission = Submission::select('uid')->where(['cid' => $this->contest_id, 'pid' => $contestProblem->problem_id, 'result' => 'Accepted'])->orderby('runid', 'asc')->first();
-                if(isset($fb_submission) && count($fb_submission) == 1)
+                if (isset($fb_submission) && count($fb_submission) == 1)
                     $fb_uid = $fb_submission->uid;
                 else
                     $fb_uid = 0;
                 $problemSubmissionObj = $submissionObj->where('pid', $contestProblem->problem_id);
                 $penalty_count = 0;
-                if($problemSubmissionObj != NULL && count($problemSubmissionObj) > 0)
-                {
-                    foreach($problemSubmissionObj as $problemSubmission)
-                    {
-                        if($problemSubmission->result == 'Accepted')
-                        {
+                if ($problemSubmissionObj != NULL && count($problemSubmissionObj) > 0) {
+                    foreach ($problemSubmissionObj as $problemSubmission) {
+                        if ($problemSubmission->result == 'Accepted') {
                             $problem_time = strtotime($problemSubmission->submit_time) - strtotime($contestObj->begin_time);
                             $penalty_list[$cpid]['time'] = $this->time_to_str($problem_time);
                             $penalty_list[$cpid]['penalty'] = $penalty_count;
                             $total_penalty += $problem_time + $penalty_count * 20 * 60;
                             $result_list[$cpid] = "Accepted";
-                            if($this->uid == $fb_uid || $fb_uid == 0)
-                            {
+                            if ($this->uid == $fb_uid || $fb_uid == 0) {
                                 $result_list[$cpid] = "First Blood";
                             }
                             $ac_count++;
                             break;
-                        }
-                        else
-                        {
+                        } else {
                             $penalty_count++;
                             $penalty_list[$cpid]['penalty'] = $penalty_count;
                             $result_list[$cpid] = $problemSubmission->result;
@@ -97,7 +92,7 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
             $total_penalty = $this->time_to_str($total_penalty);
             //save to database(or redis)
             $contestRanklistObj = ContestRanklist::where(['contest_id' => $this->contest_id, 'uid' => $this->uid])->first();
-            if($contestRanklistObj == NULL || count($contestRanklistObj) == 0)
+            if ($contestRanklistObj == NULL || count($contestRanklistObj) == 0)
                 $contestRanklistObj = new ContestRanklist;
             $contestRanklistObj->contest_id = $this->contest_id;
             $contestRanklistObj->uid = $this->uid;
@@ -108,27 +103,24 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
             $contestRanklistObj->save();
         }
         //when initializing, update only at the last dispatch
-        if($this->init)
+        if ($this->init)
             return;
         //update ranklist every second
-        $last_update_time = Redis::get('last_update_time_'.$this->contest_id);
-        if($last_update_time == NULL)
-        {
-            Redis::set('last_update_time_'.$this->contest_id, time());
-        }
-        elseif(time()- $last_update_time < 5 && $this->force == false)
+        $last_update_time = Redis::get('last_update_time_' . $this->contest_id);
+        if ($last_update_time == NULL) {
+            Redis::set('last_update_time_' . $this->contest_id, time());
+        } elseif (time() - $last_update_time < 5 && $this->force == false)
             return;
         //update ranklist
         $contestRanklistObj = ContestRanklist::where('contest_id', $this->contest_id)->get();
         $ranklist = $contestRanklistObj->all();
         usort($ranklist, ['self', 'cmp']);
         $rank = 1;
-        foreach($ranklist as $user)
-        {
+        foreach ($ranklist as $user) {
             ContestRanklist::where(['contest_id' => $this->contest_id, 'uid' => $user->uid])->update(['rank' => $rank]);
             $rank++;
         }
-        Redis::set('last_update_time_'.$this->contest_id, time());
+        Redis::set('last_update_time_' . $this->contest_id, time());
     }
 
     public function time_to_str($time)
@@ -150,8 +142,7 @@ class updateContestRanklist extends Job implements SelfHandling, ShouldQueue
 
     public function cmp($userA, $userB)
     {
-        if($userA->total_ac == $userB->total_ac)
-        {
+        if ($userA->total_ac == $userB->total_ac) {
             return $this->str_to_time($userA->total_penalty) > $this->str_to_time($userB->total_penalty);
         }
         return $userA->total_ac < $userB->total_ac;

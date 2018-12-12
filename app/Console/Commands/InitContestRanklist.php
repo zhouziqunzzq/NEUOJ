@@ -45,53 +45,43 @@ class InitContestRanklist extends Command
     public function handle()
     {
         $cid = $this->argument('cid');
-        if($cid == "all")
-        {
+        if ($cid == "all") {
             $contestObj = Contest::get();
-        }
-        else
-        {
+        } else {
             $contestObj = Contest::where('contest_id', $cid)->get();
         }
-        if($contestObj == NULL)
-        {
+        if ($contestObj == NULL) {
             $this->error('Contest not exists!');
             return;
         }
-        foreach($contestObj as $contest)
-        {
+        foreach ($contestObj as $contest) {
             $this->info('Contest ' . $contest->contest_id . " ranklist initializing...");
             $contestUserObj = ContestUser::select("username")->where('contest_id', $contest->contest_id)->get();
             $i = 0;
             $total = $contestUserObj->count();
-            if($total == 0)
-            {
+            if ($total == 0) {
                 $contestUserObj = Submission::select('uid')->where(['cid' => $contest->contest_id])->get()->unique('uid');
                 $total = count($contestUserObj);
             }
-            foreach($contestUserObj as $contestUser)
-            {
-                if($i % 100 == 0)
+            foreach ($contestUserObj as $contestUser) {
+                if ($i % 100 == 0)
                     $this->info("($i/$total)");
                 $i++;
                 $uid = 0;
-                if(!isset($contestUser->uid))
-                {
+                if (!isset($contestUser->uid)) {
                     $userObj = User::where('username', $contestUser->username)->first();
-                    if($userObj == NULL)
-                    {
-                        if($i == $total)
-                            $this->dispatch(new updateContestRanklist($contest->contest_id, 0, true));
+                    if ($userObj == NULL) {
+                        if ($i == $total)
+                            updateContestRanklist::dispatch($contest->contest_id, 0, true);
                         continue;
                     }
                     $uid = $userObj->uid;
-                }
-                else
+                } else
                     $uid = $contestUser->uid;
-                if($i == $total)
-                    $this->dispatch(new updateContestRanklist($contest->contest_id, $uid, true));
+                if ($i == $total)
+                    updateContestRanklist::dispatch($contest->contest_id, $uid, true);
                 else
-                    $this->dispatch(new updateContestRanklist($contest->contest_id, $uid, false, true));
+                    updateContestRanklist::dispatch($contest->contest_id, $uid, false, true);
             }
             $this->info("($total/$total)");
             $this->info("Contest " . $contest->contest_id . " initialization finished");

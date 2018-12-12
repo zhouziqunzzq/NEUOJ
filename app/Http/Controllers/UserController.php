@@ -362,7 +362,8 @@ class UserController extends Controller
                 }
                 TrainUser::where('uid', $binduid)->delete();
                 /* update Ranklist queue */
-                $this->dispatch(new updateUserProblemCount($uid));
+                updateUserProblemCount::dispatch($uid);
+
                 return Redirect::to('/dashboard/settings');
             }
             $data['bind_account'] = $request->input('bind_account');

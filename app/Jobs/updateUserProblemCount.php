@@ -2,25 +2,25 @@
 
 namespace App\Jobs;
 
-use App\Jobs\Job;
 use App\Submission;
 use App\Userinfo;
+use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Bus\SelfHandling;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
 
 
-class updateUserProblemCount extends Job implements SelfHandling, ShouldQueue
+class updateUserProblemCount extends Job implements ShouldQueue
 {
-    use InteractsWithQueue, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $uid;
 
     /**
      * Create a new job instance.
      *
-     * @return void
+     * @param $uid
      */
     public function __construct($uid)
     {

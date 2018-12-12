@@ -38,17 +38,17 @@ class RESTController extends Controller
         $input = $request->input();
 
         $langsufix = [
-                "C" => "c",
-                "Java" => "java",
-                "C++11" => "cc",
-                "C++" => "cpp",
-                "Python2" => "py2",
-                "Python3" => "py3",
-            ];
+            "C" => "c",
+            "Java" => "java",
+            "C++11" => "cc",
+            "C++" => "cpp",
+            "Python2" => "py2",
+            "Python3" => "py3",
+        ];
         $jsonObj = [];
 
         /* Checkin the judgehost */
-        if(!Cache::has('judgehost.ts'))
+        if (!Cache::has('judgehost.ts'))
             $judgehostTimestamp = [];
         else
             $judgehostTimestamp = Cache::get('judgehost.ts');
@@ -59,7 +59,7 @@ class RESTController extends Controller
 
         $submission = Submission::where('judge_status', 0)->first();
         /* This means no active submissions */
-        if($submission == NULL)
+        if ($submission == NULL)
             return response()->json(NULL);
         $updateOk = Submission::where([
             'runid' => $submission->runid,
@@ -70,7 +70,7 @@ class RESTController extends Controller
             'judgeid' => $input['judgehost']
         ]);
         // Check whether this judgehost actually get the submission
-        if($updateOk == 0)
+        if ($updateOk == 0)
             return response()->json(NULL);
 
         Log::info("Judgehost " . $input['judgehost'] . " fetched submission $submission->runid");
@@ -116,9 +116,8 @@ class RESTController extends Controller
         $submission = Submission::where('runid', $input['id'])->first();
         $jsonObj[0]["filename"] = $submission->submit_file;
         if (Storage::exists("submissions/" . $submission->submit_file)) {
-            $content = Storage::get("submissions/".$submission->submit_file);
-        }
-        else {
+            $content = Storage::get("submissions/" . $submission->submit_file);
+        } else {
             Log::info("Fetching submission $submission->runid but submission file is missing, using blank space for temporary solution...");
             $content = " ";
         }
@@ -151,7 +150,7 @@ class RESTController extends Controller
 
     public function getExecutable(Request $request)
     {
-        $content = Storage::get("executables/".$request->input('execid').".zip");
+        $content = Storage::get("executables/" . $request->input('execid') . ".zip");
         $content = base64_encode($content);
         return response()->json($content);
     }
@@ -160,9 +159,8 @@ class RESTController extends Controller
     {
         $input = $request->input();
 
-        if($input["compile_success"] != "1")
-        {
-            Submission::where(['runid'=> $id, 'judge_status' => 1])->update([
+        if ($input["compile_success"] != "1") {
+            Submission::where(['runid' => $id, 'judge_status' => 1])->update([
                 "judge_status" => 3,
                 "err_info" => base64_decode($input['output_compile']),
                 "result" => "Compile Error",
@@ -170,14 +168,13 @@ class RESTController extends Controller
 
             /* update Ranklist queue */
             $submissionObj = Submission::select('uid', 'cid')->where('runid', $id)->first();
-            $this->dispatch(new updateUserProblemCount($submissionObj->uid));
-            if($submissionObj->cid != 0)
-            {
+            updateUserProblemCount::dispatch($submissionObj->uid);
+            if ($submissionObj->cid != 0) {
                 $contestObj = Contest::where('contest_id', $submissionObj->cid)->first();
-                if(strtotime($contestObj->end_time) - time() <= 30)
-                    $this->dispatch(new updateContestRanklist($submissionObj->cid, $submissionObj->uid, true));
+                if (strtotime($contestObj->end_time) - time() <= 30)
+                    updateContestRanklist::dispatch($submissionObj->cid, $submissionObj->uid, true);
                 else
-                    $this->dispatch(new updateContestRanklist($submissionObj->cid, $submissionObj->uid, false));
+                    updateContestRanklist::dispatch($submissionObj->cid, $submissionObj->uid, false);
             }
         }
     }
@@ -187,7 +184,7 @@ class RESTController extends Controller
         $jsonObj = [];
         $input = $request->input();
         $submission = Submission::where('runid', $input["judgingid"])->where('judge_status', 1)->first();
-        if($submission == NULL)
+        if ($submission == NULL)
             return response()->json(NULL);
         $testcase = Testcase::where('pid', $submission->pid)->first();
         $jsonObj["testcaseid"] = $testcase->testcase_id;
@@ -204,13 +201,10 @@ class RESTController extends Controller
         $jsonData = "";
         $input = $request->input();
         $testcase = Testcase::where("testcase_id", $input["testcaseid"])->first();
-        if(isset($input["input"]))
-        {
-            $jsonData = Storage::get("testdata/".$testcase->input_file_name);
-        }
-        else if(isset($input["output"]))
-        {
-            $jsonData = Storage::get("testdata/".$testcase->output_file_name);
+        if (isset($input["input"])) {
+            $jsonData = Storage::get("testdata/" . $testcase->input_file_name);
+        } else if (isset($input["output"])) {
+            $jsonData = Storage::get("testdata/" . $testcase->output_file_name);
         }
         $jsonData = base64_encode($jsonData);
         return response()->json($jsonData);
@@ -237,19 +231,17 @@ class RESTController extends Controller
          * Judge Whether the code is copied from another code
          * Judge this only when the result is AC
          */
-        if($input["runresult"] == "correct")
+        if ($input["runresult"] == "correct")
             $this->checkSIM($input['judgingid']);
 
         /* Contest Only, Judge for First Blood */
-        if($input["runresult"] == "correct" && $submissionObj->cid != 0)
-        {
+        if ($input["runresult"] == "correct" && $submissionObj->cid != 0) {
             $contestObj = Contest::where('contest_id', $submissionObj->cid)->first();
             $contestProblemObj = ContestProblem::where([
                 "contest_id" => $contestObj->contest_id,
                 "problem_id" => $submissionObj->pid,
             ])->first();
-            if($contestProblemObj->first_ac == 0)
-            {
+            if ($contestProblemObj->first_ac == 0) {
                 $first_ac = Submission::where('runid', $input['judgingid'])->first()->uid;
                 ContestProblem::where([
                     "contest_id" => $contestObj->contest_id,
@@ -267,57 +259,46 @@ class RESTController extends Controller
         );
 
         /* update Ranklist queue */
-        $this->dispatch(new updateUserProblemCount($submissionObj->uid));
-        if($submissionObj->cid != 0)
-        {
+        updateUserProblemCount::dispatch($submissionObj->uid);
+        if ($submissionObj->cid != 0) {
             $contestObj = Contest::where('contest_id', $submissionObj->cid)->first();
-            if(strtotime($contestObj->end_time) - time() <= 30)
-                $this->dispatch(new updateContestRanklist($submissionObj->cid, $submissionObj->uid, true));
+            if (strtotime($contestObj->end_time) - time() <= 30)
+                updateContestRanklist::dispatch($submissionObj->cid, $submissionObj->uid, true);
             else
-                $this->dispatch(new updateContestRanklist($submissionObj->cid, $submissionObj->uid, false));
+                updateContestRanklist::dispatch($submissionObj->cid, $submissionObj->uid, false);
         }
         // Now we just return and skip the balloon logic
         return
-        //var_dump($input);
-        /* Balloon */
-        $submissionObj = Submission::where('runid', $input['judgingid'])->first();
-        if($submissionObj->cid != 0)
-        {
+            //var_dump($input);
+            /* Balloon */
+            $submissionObj = Submission::where('runid', $input['judgingid'])->first();
+        if ($submissionObj->cid != 0) {
             /* Not accepted */
-            if ($resultMapping[$input["runresult"]] != "Accepted")
-            {
+            if ($resultMapping[$input["runresult"]] != "Accepted") {
                 $contestBalloon = ContestBalloon::all();
-                foreach ($contestBalloon as $contestBalloonObj)
-                {
+                foreach ($contestBalloon as $contestBalloonObj) {
                     //var_dump($contestBalloonObj->runid);
-                    if($contestBalloonObj->runid == $submissionObj->runid)
-                    {
-                        if ($contestBalloonObj->balloon_status == 1) /* AC rejudging */
-                        {
+                    if ($contestBalloonObj->runid == $submissionObj->runid) {
+                        if ($contestBalloonObj->balloon_status == 1) /* AC rejudging */ {
                             /* discard balloon */
                             $contestBalloonObj->delete();
                             /* push into event queue (discard balloon) */
                             $contestBalloonEventObj = new ContestBalloonEvent();
                             $contestBalloonEventObj->runid = $contestBalloonObj->runid;
-                            $contestBalloonEventObj->event_status = env('BALLOON_DISCARD',2);
+                            $contestBalloonEventObj->event_status = env('BALLOON_DISCARD', 2);
                             $contestBalloonEventObj->save();
                         }
                         break;
                     }
                 }
-            }
-            /* Accepted */
-            else
-            {
+            } /* Accepted */
+            else {
                 $contestBalloon = ContestBalloon::all();
                 $balloonExists = 0;
-                foreach ($contestBalloon as $contestBalloonObj)
-                {
+                foreach ($contestBalloon as $contestBalloonObj) {
                     $contestBalloonSubmissionObj = Submission::where('runid', $contestBalloonObj->runid)->first();
-                    if ($submissionObj->cid == $contestBalloonSubmissionObj->cid && $submissionObj->pid == $contestBalloonSubmissionObj->pid && $submissionObj->uid == $contestBalloonSubmissionObj->uid)
-                    {
-                        if ($contestBalloonObj->balloon_status == 1) /* AC rejudging */
-                        {
+                    if ($submissionObj->cid == $contestBalloonSubmissionObj->cid && $submissionObj->pid == $contestBalloonSubmissionObj->pid && $submissionObj->uid == $contestBalloonSubmissionObj->uid) {
+                        if ($contestBalloonObj->balloon_status == 1) /* AC rejudging */ {
                             /* Send balloon */
                             $contestBalloonObj->balloon_status == 0;
                             $contestBalloonObj->save();
@@ -326,8 +307,7 @@ class RESTController extends Controller
                         break;
                     }
                 }
-                if ($balloonExists == 0)
-                {
+                if ($balloonExists == 0) {
                     $contestBalloonObj = new ContestBalloon();
                     $contestBalloonObj->runid = $submissionObj->runid;
                     $contestBalloonObj->balloon_status = 0; /* Send balloon */
@@ -335,7 +315,7 @@ class RESTController extends Controller
                     /* push into event queue (send balloon) */
                     $contestBalloonEventObj = new ContestBalloonEvent();
                     $contestBalloonEventObj->runid = $contestBalloonObj->runid;
-                    $contestBalloonEventObj->event_status = env('BALLOON_SEND',1);
+                    $contestBalloonEventObj->event_status = env('BALLOON_SEND', 1);
                     $contestBalloonEventObj->save();
                 }
             }
@@ -364,39 +344,27 @@ class RESTController extends Controller
         $flag = 0;
         $dot = false;
         $dot_count = 0;
-        for($i = 0; $i < $len; $i++)
-        {
-            if(is_numeric($meta[$i]) || $meta[$i] == '.')
-            {
-                if($meta[$i] == '.')
-                {
+        for ($i = 0; $i < $len; $i++) {
+            if (is_numeric($meta[$i]) || $meta[$i] == '.') {
+                if ($meta[$i] == '.') {
                     $dot = true;
-                }
-                else
-                {
-                    if($dot)
-                    {
+                } else {
+                    if ($dot) {
                         $dot_temp = $dot_temp * 10 + ($meta[$i] - '0');
                         $dot_count++;
-                    }
-                    else
-                    {
+                    } else {
                         $result[$flag] = $result[$flag] * 10 + ($meta[$i] - '0');
                     }
                 }
-            }
-            /* First Element Parse OK */
-            else if($meta[$i] == ',')
-            {
+            } /* First Element Parse OK */
+            else if ($meta[$i] == ',') {
                 $flag = 1;
                 $result[0] = $result[0] + ($dot_temp * 1.0) / pow(10, $dot_count);
                 $dot = false;
                 $dot_count = 0;
                 $dot_temp = 0;
-            }
-            /* Second Element Parse OK */
-            else if($meta[$i] == ':' && $flag == 1)
-            {
+            } /* Second Element Parse OK */
+            else if ($meta[$i] == ':' && $flag == 1) {
                 $flag = 2;
                 $result[1] = $result[1] + ($dot_temp * 1.0) / pow(10, $dot_count);
                 $dot = false;
@@ -442,7 +410,7 @@ class RESTController extends Controller
             'lang' => $currentSubmissionObj->lang,
             'result' => "Accepted"
         ])
-            ->where('uid', '<>', $currentSubmissionObj->uid) //Don check submissions submitted by the same uid
+            ->where('uid', '<>', $currentSubmissionObj->uid)//Don check submissions submitted by the same uid
             ->get();
 
         $lang = $currentSubmissionObj->lang;
@@ -453,53 +421,46 @@ class RESTController extends Controller
         $SUBMISSIONSDIR = env('SUBMISSIONSDIR', './storage/app/submissoins');
         $SIMEXEC = $SIMDIR . '/' . $simLangMapArr[$lang];
 
-        foreach($relatedSubmissionObj as $relatedSubmission)
-        {
+        foreach ($relatedSubmissionObj as $relatedSubmission) {
             /* Run SIM Check Here */
             unset($result);
 
             /* Do not check with itself */
-            if($relatedSubmission->runid == $currentSubmissionObj->runid)
+            if ($relatedSubmission->runid == $currentSubmissionObj->runid)
                 continue;
 
             /* First Do Similarity Percentage Check */
 
-            $SIM_PERCENTAGE_COMMAND = $SIMEXEC . ' -p ' . $SUBMISSIONSDIR.'/'. $currentSubmissionObj->submit_file . ' ' . $SUBMISSIONSDIR . '/' . $relatedSubmission->submit_file . " > /tmp/sim_" . $run_id;
+            $SIM_PERCENTAGE_COMMAND = $SIMEXEC . ' -p ' . $SUBMISSIONSDIR . '/' . $currentSubmissionObj->submit_file . ' ' . $SUBMISSIONSDIR . '/' . $relatedSubmission->submit_file . " > /tmp/sim_" . $run_id;
             exec($SIM_PERCENTAGE_COMMAND, $result);
 
             /* The first Percentage in the output is what we need */
-            $sim_data = file_get_contents('/tmp/sim_'.$run_id);
+            $sim_data = file_get_contents('/tmp/sim_' . $run_id);
             //echo $SIM_PERCENTAGE_COMMAND . '<br/>';
             //echo $sim_data;
             $pos = strpos($sim_data, "consists for");
 
-            if($pos != NULL)
-            {
+            if ($pos != NULL) {
                 $pos_end = strpos($sim_data, "%");
                 $tmpstr = substr($sim_data, $pos, $pos_end - $pos + 1);
                 $pattern = "/\d+/";
                 $resultarr = [];
                 preg_match($pattern, $tmpstr, $resultarr);
                 $similarity = intval($resultarr[0]);
-                if($max_similarity < $similarity)
-                {
+                if ($max_similarity < $similarity) {
                     $max_similarity = $similarity;
                     $max_similarity_runid = $relatedSubmission->runid;
                 }
             }
         }
-        if($max_similarity >= 80)
-        {
+        if ($max_similarity >= 80) {
             $simObj = new Sim;
             $simObj->runid = $currentSubmissionObj->runid;
             $simObj->sim_runid = $max_similarity_runid;
             $simObj->similarity = $max_similarity;
-            if(Sim::where('runid', $currentSubmissionObj->runid)->first() == NULL)
-            {
+            if (Sim::where('runid', $currentSubmissionObj->runid)->first() == NULL) {
                 $simObj->save();
-            }
-            else
-            {
+            } else {
                 /* Whether this code is buggy or not remains unsure */
                 Sim::where('runid', $currentSubmissionObj->runid)->update([
                     'sim_runid' => $max_similarity_runid,
@@ -509,16 +470,16 @@ class RESTController extends Controller
 
             $sim_file_name = Submission::find($max_similarity_runid)->submit_file;
 
-            $SIM_DIFF_COMMAND = $SIMEXEC . ' ' . $SUBMISSIONSDIR.'/'. $currentSubmissionObj->submit_file . ' ' . $SUBMISSIONSDIR . '/' . $sim_file_name . " > /tmp/sim_diff_" . $run_id;
+            $SIM_DIFF_COMMAND = $SIMEXEC . ' ' . $SUBMISSIONSDIR . '/' . $currentSubmissionObj->submit_file . ' ' . $SUBMISSIONSDIR . '/' . $sim_file_name . " > /tmp/sim_diff_" . $run_id;
             exec($SIM_DIFF_COMMAND);
-            $sim_diff = file_get_contents('/tmp/sim_diff_'.$run_id);
+            $sim_diff = file_get_contents('/tmp/sim_diff_' . $run_id);
             Storage::put('sim/' . $simObj->runid . '_' . $simObj->sim_runid . '.sim', $sim_diff);
         }
 
         /* Cleanup the temp file */
-        exec('rm -rf /tmp/sim_'.$run_id);
-        exec('rm -rf /tmp/sim_diff_'.$run_id);
-        return ;
+        exec('rm -rf /tmp/sim_' . $run_id);
+        exec('rm -rf /tmp/sim_diff_' . $run_id);
+        return;
     }
 
 }
