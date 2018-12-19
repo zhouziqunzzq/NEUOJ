@@ -34,17 +34,9 @@ class RESTController extends Controller
 
     public function postJudgings(Request $request)
     {
-
         $input = $request->input();
 
-        $langsufix = [
-            "C" => "c",
-            "Java" => "java",
-            "C++11" => "cc",
-            "C++" => "cpp",
-            "Python2" => "py2",
-            "Python3" => "py3",
-        ];
+        $lang_suffix = config('language.lang_suffix');
         $jsonObj = [];
 
         /* Checkin the judgehost */
@@ -77,7 +69,7 @@ class RESTController extends Controller
 
         $problem = Problem::where('problem_id', $submission->pid)->first();
         $runExecutable = Executable::where('execid', 'run')->first();
-        $compileExecutable = Executable::where('execid', $langsufix[$submission->lang])->first();
+        $compileExecutable = Executable::where('execid', $lang_suffix[$submission->lang])->first();
         $compareExecutable = Executable::where('execid', 'compare')->first();
         /*
          * Make the responce format readable for judgehost
@@ -86,7 +78,7 @@ class RESTController extends Controller
         $jsonObj["cid"] = 0;
         $jsonObj["teamid"] = $submission->uid;
         $jsonObj["probid"] = $submission->pid;
-        $jsonObj["langid"] = $langsufix[$submission->lang];
+        $jsonObj["langid"] = $lang_suffix[$submission->lang];
         $jsonObj["rejudgingid"] = "";
         $jsonObj["maxruntime"] = $problem->time_limit;
         $jsonObj["memlimit"] = $problem->mem_limit;

@@ -35,33 +35,34 @@ class SubmissionController extends Controller
      */
     public function submitAction(Request $request, $problem_id)
     {
-        if($request->method() == "POST")
-        {
-            $langsufix = [
-                "C" => "c",
-                "Java" => "java",
-                "C++11" => "cc",
-                "C++" => "cpp",
-                "Python2" => "py2",
-                "Python3" => "py3",
-            ];
-
-            $vdtor = Validator::make($request->all(),[
+        if ($request->method() == "POST") {
+            // validation
+            $lang_suffix = config('language.lang_suffix');
+            $validator = Validator::make($request->all(), [
                 "code" => "required|min:50|max:50000",
             ]);
+            if ($validator->fails()) {
+                return redirect($request->server('HTTP_REFERER'))
+                    ->withErrors($validator);
+            }
+
+            // Check whether the selected lang was supported
+            // to prevent abnormal POST submissions from
+            // devastating judgehosts
+            if (!array_key_exists($request->input('lang'), $lang_suffix)) {
+                return redirect($request->server('HTTP_REFERER'))
+                    ->withErrors(array(
+                        'message' => 'Unsupported language.'
+                    ));
+            }
+
             //var_dump($request->input());
             //var_dump($request->session()->all());
             $uid = $request->session()->get('uid');
-            $fileName = "";
             $submission = new Submission;
-            if($vdtor->fails())
-            {
-                return Redirect::to($request->server('HTTP_REFERER'))
-                    ->withErrors($vdtor);
-            }
-            $fileName = $uid."-".$problem_id."-".time().".".$langsufix[$request->input('lang')];
-            echo $fileName;
-            Storage::put("submissions/".$fileName, $request->input('code'));
+            $fileName = $uid . "-" . $problem_id . "-" . time() . "." . $lang_suffix[$request->input('lang')];
+//            echo $fileName;
+            Storage::put("submissions/" . $fileName, $request->input('code'));
             $submission->pid = $problem_id;
             $submission->uid = $uid;
             $submission->cid = 0;
@@ -73,7 +74,8 @@ class SubmissionController extends Controller
             $submission->judge_status = 0;
             $submission->save();
             $runid = $submission->id;
-            return Redirect::to("/status/$runid")->withcookie('lang',$submission->lang);
+            return redirect("/status/$runid")
+                ->withcookie('lang', $submission->lang);
         }
     }
 
@@ -83,6 +85,7 @@ class SubmissionController extends Controller
      *
      * @return View
      * @description get submission information from database and show submission by given $run_id
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function getSubmissionByID(Request $request, $run_id)
     {
@@ -96,8 +99,7 @@ class SubmissionController extends Controller
         } else
             $data->code = "can't find submission file!";
         /* It's in contest */
-        if(isset($input['c']))
-        {
+        if (isset($input['c'])) {
             $contestObj = Contest::where('contest_id', $input['c'])->first();
             $data->contest = $contestObj;
             $data->contestProblemId = $input['p'];
@@ -110,7 +112,7 @@ class SubmissionController extends Controller
      * @function getSubmission
      * @input $request
      *
-     * @return Redirect 
+     * @return Redirect
      * @description Just Redirect to /status/p/1
      */
     public function getSubmission(Request $request)
@@ -133,21 +135,16 @@ class SubmissionController extends Controller
         $input = $request->all();
         $queryArr = [];
 
-        foreach($input as $key => $val)
-        {
-            if($val == "All" || $val == "")
+        foreach ($input as $key => $val) {
+            if ($val == "All" || $val == "")
                 continue;
-            if($key != "username")
+            if ($key != "username")
                 $queryArr[$key] = $val;
-            if($key == "username")
-            {
+            if ($key == "username") {
                 $userObj = User::where('username', $val)->first();
-                if($userObj != NULL)
-                {
+                if ($userObj != NULL) {
                     $queryArr['uid'] = $userObj->uid;
-                }
-                else
-                {
+                } else {
                     $queryArr['uid'] = "Th11EN412am#eN%o0neCanCreEte";
                 }
             }
@@ -159,8 +156,7 @@ class SubmissionController extends Controller
             ->skip(($page_id - 1) * $itemsPerPage)
             ->take($itemsPerPage)
             ->get();
-        for ($count = 0; $count < $submissionObj->count(); $count++)
-        {
+        for ($count = 0; $count < $submissionObj->count(); $count++) {
             $data['submissions'][$count] = $submissionObj[$count];
             $problemTitle = $submissionObj[$count]->problem->title;
             $username = $submissionObj[$count]->user->username;
@@ -170,16 +166,13 @@ class SubmissionController extends Controller
         }
         $queryInput = $request->input();
         $queryStr = "?";
-        foreach($queryInput as $key => $val)
-        {
+        foreach ($queryInput as $key => $val) {
             $queryStr .= $key . "=" . $val . "&";
         }
-        if (($page_id) * $itemsPerPage >= $submissionObjCount)
-        {
+        if (($page_id) * $itemsPerPage >= $submissionObjCount) {
             $data['lastPage'] = true;
         }
-        if($page_id == 1)
-        {
+        if ($page_id == 1) {
             $data['firstPage'] = true;
         }
         $data['page_id'] = $page_id;
@@ -201,8 +194,7 @@ class SubmissionController extends Controller
      */
     public function contestSubmitAction(Request $request, $contest_id, $problem_id)
     {
-        if($request->method() == "POST")
-        {
+        if ($request->method() == "POST") {
             $data = [];
 
             $contestProblemObj = ContestProblem::where([
@@ -211,38 +203,41 @@ class SubmissionController extends Controller
             ])->first();
             $contestObj = Contest::where('contest_id', $contest_id)->first();
             $data['contest'] = $contestObj;
-            if(!$contestObj->isRunning())
-            {
+            if (!$contestObj->isRunning()) {
                 //if(!(session('uid') && session('uid') <= 2))
-                if(!roleController::is("admin"))
+                if (!roleController::is("admin"))
                     return View::make("errors.contest_end", $data);
             }
 
             $realProblemID = $contestProblemObj->problem_id;
+            $lang_suffix = config('language.lang_suffix');
 
-            $langsufix = [
-                "C" => "c",
-                "Java" => "java",
-                "C++11" => "cc",
-                "C++" => "cpp",
-            ];
-
-            $vdtor = Validator::make($request->all(),[
+            // validation
+            $validator = Validator::make($request->all(), [
                 "code" => "required|min:50|max:50000",
             ]);
-            var_dump($request->input());
-            var_dump($request->session()->all());
-            $uid = $request->session()->get('uid');
-            $fileName = "";
-            $submission = new Submission;
-            if($vdtor->fails())
-            {
-                return Redirect::to($request->server('HTTP_REFERER'))
-                    ->withErrors($vdtor);
+            if ($validator->fails()) {
+                return redirect($request->server('HTTP_REFERER'))
+                    ->withErrors($validator);
             }
-            $fileName = $contest_id . "-" . $uid."-".$problem_id."-".time().".".$langsufix[$request->input('lang')];
+
+            // Check whether the selected lang was supported
+            // to prevent abnormal POST submissions from
+            // devastating judgehosts
+            if (!array_key_exists($request->input('lang'), $lang_suffix)) {
+                return redirect($request->server('HTTP_REFERER'))
+                    ->withErrors(array(
+                        'message' => 'Unsupported language.'
+                    ));
+            }
+
+//            var_dump($request->input());
+//            var_dump($request->session()->all());
+            $uid = $request->session()->get('uid');
+            $submission = new Submission;
+            $fileName = $contest_id . "-" . $uid . "-" . $problem_id . "-" . time() . "." . $lang_suffix[$request->input('lang')];
             echo $fileName;
-            Storage::put("submissions/".$fileName, $request->input('code'));
+            Storage::put("submissions/" . $fileName, $request->input('code'));
             $submission->pid = $realProblemID;
             $submission->uid = $uid;
             $submission->cid = $contest_id;
@@ -269,14 +264,13 @@ class SubmissionController extends Controller
     {
         $data = [];
         $input = $request->all();
-        if(!isset($input['run_id']))
+        if (!isset($input['run_id']))
             return null;
 
         $run_id = $input['run_id'];
 
         $submissionObj = Submission::find($run_id);
-        if($submissionObj->cid != 0)
-        {
+        if ($submissionObj->cid != 0) {
             $submissionObj->cpid = ContestProblem::where([
                 "contest_id" => $submissionObj->cid,
                 "problem_id" => $submissionObj->pid
@@ -302,41 +296,33 @@ class SubmissionController extends Controller
         ])->first();
 
         // contest_id == 0 means problem_id is RealProblemID
-        if($contest_id == 0)
+        if ($contest_id == 0)
             $realProblemID = $problem_id;
         else
             $realProblemID = $contestProblemObj->problem_id;
 
         // If contest_id == 0 , judge all submissions including contest
-        if($contest_id == 0)
-        {
+        if ($contest_id == 0) {
             $submissionObj = Submission::where([
                 "pid" => $realProblemID
             ]);
-        }
-        else
-        {
+        } else {
             $submissionObj = Submission::where([
                 "cid" => $contest_id,
                 "pid" => $realProblemID
             ]);
         }
 
-        if($contest_id != 0)
-        {
+        if ($contest_id != 0) {
             $contestProblemObj->first_ac = 0;
             $contestProblemObj->save();
         }
 
-        foreach($submissionObj->get() as $submission)
-        {
-            if($contest_id != 0 && $submission->result == 'Accepted')
-            {
+        foreach ($submissionObj->get() as $submission) {
+            if ($contest_id != 0 && $submission->result == 'Accepted') {
                 $contestBalloon = ContestBalloon::all();
-                foreach($contestBalloon as $contestBalloonObj)
-                {
-                    if($contestBalloonObj->runid == $submission->runid)
-                    {
+                foreach ($contestBalloon as $contestBalloonObj) {
+                    if ($contestBalloonObj->runid == $submission->runid) {
                         $contestBalloonObj->balloon_status = 1;
                         $contestBalloonObj->save();
                         break;
@@ -349,7 +335,7 @@ class SubmissionController extends Controller
             $submission->save();
         }
 
-        if($contest_id == 0)
+        if ($contest_id == 0)
             return Redirect::to("/status/");
         $uid = $request->session()->get('uid');
         OJLog::rejudge($uid, $contest_id, $problem_id);
@@ -385,13 +371,12 @@ class SubmissionController extends Controller
     public function getSim(Request $request)
     {
         $input = $request->all();
-        if(!isset($input['left']) || !isset($input['right']))
+        if (!isset($input['left']) || !isset($input['right']))
             abort(404);
         $left = $input['left'];
         $right = $input['right'];
         $submissionObj = Submission::find($left);
-        if($submissionObj != NULL)
-        {
+        if ($submissionObj != NULL) {
             $leftUserObj = User::find($submissionObj->uid);
             $rightUserObj = User::find(Submission::find($input['right'])->uid);
             $data['leftUser'] = $leftUserObj;
@@ -400,16 +385,13 @@ class SubmissionController extends Controller
             $data['rcode'] = Storage::get('submissions/' . Submission::find($input['right'])->submit_file);
 
             /* left and right is very Similar */
-            if($submissionObj->sim != NULL && $submissionObj->sim->sim_runid == $right)
-            {
+            if ($submissionObj->sim != NULL && $submissionObj->sim->sim_runid == $right) {
                 $data['sim'] = $submissionObj->sim;
                 /* Admin can download sim */
                 $data['sim_diff'] = $left . '_' . $right . '.sim';
             }
             return View::make('status.sim', $data);
-        }
-        else
-        {
+        } else {
             abort(404);
         }
     }
