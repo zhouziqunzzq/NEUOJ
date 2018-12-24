@@ -27,8 +27,12 @@
 </head>
 <body>
 	@include("layout.header")
-	<h3 class="custom-heading">Problem: {{ $problem->title }}</h3>
-	<div class="front-container">
+    @if ($problem->shortTitle !== "" && $problem->title !== $problem->shortTitle)
+        <h3 class="custom-heading">Problem {{ $problem->shortTitle }}: {{ $problem->title }}</h3>
+    @else
+        <h3 class="custom-heading">Problem: {{ $problem->title }}</h3>
+    @endif
+    <div class="front-container">
 	<div class="text-center text-primary front-time-box">
 		Time limit: {{ $problem->time_limit }}s&nbsp;&nbsp;&nbsp;&nbsp;
 		Mem limit:

@@ -405,7 +405,7 @@ class ProblemController extends Controller
             }
         }
         //var_dump($data['problem']);
-        $data['problem']->title = $contestProblemObj->problem_title;
+        $data['problem']->shortTitle = $contestProblemObj->problem_title;
         $data['isContest'] = true;
         $data['contest'] = $contestObj;
         $data['problem']->threadCount = $threadCount;
