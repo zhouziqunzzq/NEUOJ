@@ -227,7 +227,7 @@ class RESTController extends Controller
          * Judge Whether the code is copied from another code
          * Judge this only when the result is AC
          */
-        if ($input["runresult"] == "correct")
+        if (env("ENABLE_SIM", true) && $input["runresult"] == "correct")
             $this->checkSIM($input['judgingid']);
 
         /* Contest Only, Judge for First Blood */
