@@ -389,15 +389,7 @@ class RESTController extends Controller
      */
     public function checkSIM($run_id)
     {
-        $simLangMapArr = [
-            'C' => 'sim_c',
-            'C++' => 'sim_c',
-            'C++11' => 'sim_c',
-            'Java' => 'sim_java',
-            'Python2' => 'sim_text',    // this sim check doesn't have python check
-            'Python3' => 'sim_text',
-            /* Now only support two langs */
-        ];
+        $simLangMapArr = config('language.sim_lang_map');
         $currentSubmissionObj = Submission::find($run_id);
 
         /* Only Accepted results are considered */

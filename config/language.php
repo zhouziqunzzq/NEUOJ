@@ -25,4 +25,24 @@ return [
         "Python2" => "py2",
         "Python3" => "py3",
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Languages supported by SIM check Module
+    |--------------------------------------------------------------------------
+    |
+    | This value is a map that defines programming languages
+    | that are supported by SIM check Module and its corresponding
+    | sim check method.
+    |
+    */
+    'sim_lang_map' => [
+        'C' => 'sim_c',
+        'C++' => 'sim_c',
+        'C++11' => 'sim_c',
+        'Java' => 'sim_java',
+        'Python2' => 'sim_text',    // this sim check doesn't have python check
+        'Python3' => 'sim_text',
+    ],
+
 ];
