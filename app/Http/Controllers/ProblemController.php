@@ -141,6 +141,7 @@ class ProblemController extends Controller
             unset($updateProblemData['sample_input']);
             unset($updateProblemData['sample_output']);
             unset($updateProblemData['source']);
+            unset($updateProblemData['hint']);
             $updateProblemData['description'] = json_encode($jsonObj);
             //var_dump($input);
             Problem::where('problem_id', $problem_id)->update($updateProblemData);

@@ -55,6 +55,8 @@
 				<textarea class="form-control" name="sample_output">{{ $problem->sample_output or "" }}</textarea>
 				<h4>Source</h4>
 				<textarea class="form-control" name="source">{{ $problem->source or "" }}</textarea>
+				<h4>Hint</h4>
+				<textarea class="form-control" name="hint">{{ $problem->hint or "" }}</textarea>
 				<!-- Now only support single testcase -->
 				@if($testcases == NULL)
 					<h4>Upload Input File</h4>
